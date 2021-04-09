@@ -14,7 +14,7 @@ VPATH = src
 MODDIR = mod
 BUILDDIR = build
 
-all: clean $(BUILDDIR)/foul.o \
+all: mkBuildDir clean $(BUILDDIR)/foul.o \
 	$(BUILDDIR)/newTypes.o \
 	$(BUILDDIR)/uniformR8.o \
 	$(BUILDDIR)/normalR8.o \
@@ -28,7 +28,7 @@ all: clean $(BUILDDIR)/foul.o \
 	annMPCA \
 	annMLP \
 	annActivation \
-	removemod 
+	removemod
 	
 annMPCA: 
 	$(CC) $(CFLAGOPT) -o annMPCA $(BUILDDIR)/foul.o $(BUILDDIR)/uniformR8.o $(BUILDDIR)/newTypes.o $(BUILDDIR)/normalR8.o $(BUILDDIR)/annTraining.o $(BUILDDIR)/mpcaFunctions.o $(BUILDDIR)/mpca.o
@@ -47,7 +47,6 @@ clean:
 
 removemod:
 	rm -f build/*.o *.mod
-
+	rm -f *.mod
 mkBuildDir: 
 	mkdir $(BUILDDIR)
-
