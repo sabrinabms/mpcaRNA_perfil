@@ -37,4 +37,5 @@ ann*
 runMPCA
 
 # Arquivos de saida
-./output
+*.out
+*.best

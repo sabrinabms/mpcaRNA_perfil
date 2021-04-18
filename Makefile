@@ -1,7 +1,4 @@
-#Compilador Tupa
-#CC=ftn 
-
-#Compilador 
+#Compilador
 CC= mpif90 
 
 # Opcoes de compilacao
@@ -14,7 +11,7 @@ VPATH = src
 MODDIR = mod
 BUILDDIR = build
 
-all: mkBuildDir clean $(BUILDDIR)/foul.o \
+all: clean $(BUILDDIR)/foul.o \
 	$(BUILDDIR)/newTypes.o \
 	$(BUILDDIR)/uniformR8.o \
 	$(BUILDDIR)/normalR8.o \
@@ -48,5 +45,3 @@ clean:
 removemod:
 	rm -f build/*.o *.mod
 	rm -f *.mod
-mkBuildDir: 
-	mkdir $(BUILDDIR)
