@@ -189,13 +189,13 @@ CONTAINS
     !********************************************************************
     !********************************************************************
     !********************************************************************
-    SUBROUTINE blackboard(bo, NFE, higherNFE, totalNFE, doStop, doStopMPCA, iBest, op)
+    SUBROUTINE blackboard(bo, NFE, higherNFE, totalNFE, doStop, doStopMPCA, op, st)
         USE newtypes
 
         implicit none
         INCLUDE 'mpif.h'
 
-        INTEGER :: i, iBest, j, ierr, status(MPI_STATUS_SIZE), stopCount
+        INTEGER :: i, j, ierr, status(MPI_STATUS_SIZE), stopCount
         INTEGER (kind=8), INTENT(in) :: NFE
         INTEGER (kind=8), INTENT(inout) :: higherNFE, totalNFE
         INTEGER :: world_rank, world_size, nDimensions
@@ -203,6 +203,7 @@ CONTAINS
 
         type (Particle), intent(inout) :: bo
         TYPE(OptionsMPCA), intent(in) :: op
+        TYPE (StatusMPCA), INTENT(INOUT) :: st
         real (kind = 8), allocatable, dimension(:) :: send
 
         world_rank = op % iProcessor !IDENTIFICADOR DO PROCESSADOR
@@ -210,7 +211,7 @@ CONTAINS
         nDimensions = op % nDimensions
 
         if (world_size == 1) then
-            call copyFileBest(op, 0)
+!            call copyFileBest(op, st)
             higherNFE = NFE
             totalNFE = NFE
             doStopMPCA = doStop
@@ -225,7 +226,7 @@ CONTAINS
             totalNFE = NFE
 
             print*,' '
-            print*,'(a) Processador com a melhor particula:', iBest
+            print*,'(a) Processador com a melhor particula:', st % iBest
             print*,' Melhor particula: ', bo % fitness
             print*,' '
 
@@ -243,7 +244,7 @@ CONTAINS
                         bo % solution(j) = send(j)
                     ENDDO
                     bo % fitness = send(nDimensions + 1)
-                    iBest = i
+                    st % iBest = i
                 ENDIF
 
                 if (send(nDimensions + 3) > 0) then
@@ -269,11 +270,11 @@ CONTAINS
             end if
 
             print*,' '
-            print*,'(b) Processador com a melhor particula:', iBest
+            print*,'(b) Processador com a melhor particula:', st % iBest
             print*,' Melhor particula: ', bo % fitness
             print*,' '
 
-            call copyFileBest(op, iBest)
+!            call copyFileBest(op, iBest)
 
         ELSE
             DO i = 1, nDimensions
@@ -517,23 +518,23 @@ CONTAINS
     end function hooke
     
     !*****************************************************************
-    SUBROUTINE copyFileBest(op, iBest)
+    SUBROUTINE copyFileBest(op, st)
         implicit none
     
         CHARACTER (100) :: str0, str1, filename, command
-        INTEGER :: iBest
         TYPE(OptionsMPCA), intent(in) :: op
+        TYPE (StatusMPCA), INTENT(INOUT) :: st
 
         print*,' '
-        print*,'(c) Processador com a melhor particula:', iBest
+        print*,'(c) Processador com a melhor particula:', st % iBest
         print*,' '
 
-        IF (iBest < 9) THEN
-            WRITE (str0, '(I1)') iBest + 1
-        ELSE IF (iBest < 99) THEN
-            WRITE (str0, '(I2)') iBest + 1
+        IF (st % iBest < 9) THEN
+            WRITE (str0, '(I1)') st % iBest + 1
+        ELSE IF (st % iBest < 99) THEN
+            WRITE (str0, '(I2)') st % iBest + 1
         ELSE
-            WRITE (str0, '(I3)') iBest + 1
+            WRITE (str0, '(I3)') st % iBest + 1
         END IF
     
         IF (op % iExperiment < 10) THEN

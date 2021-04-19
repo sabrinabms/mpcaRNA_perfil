@@ -21,7 +21,6 @@ PROGRAM MPCA
     !**********************
     integer :: iSeed, contD, contP, iCycleBlackboard, iError
     integer :: nSeed, un, istat, it, nDimensions, paramRNA, i, j
-    integer :: pBest
     integer, allocatable, DIMENSION(:) :: vSeed, vSeed2
     REAL (kind = 8), allocatable, DIMENSION(:) :: minB, maxB
     REAL (kind = 8), allocatable, DIMENSION(:) :: realSolution
@@ -147,7 +146,6 @@ PROGRAM MPCA
     READ (string, '(I10)') op % iExperiment
 
     op % nDimensions = 6
-    pBest = 0
 
     OPEN(1, FILE='./config/configuration.ini', STATUS='OLD',  &
       ACTION='READ')
@@ -279,6 +277,7 @@ PROGRAM MPCA
     st % NFE = 0
     st % lastUpdate = 0
     st % totalNFE = 0
+    st % iBest = 0
     st % higherNFE = 0
     st % flag = .false.
     st % bestObjectiveFunction = huge(0.D0)
@@ -326,8 +325,6 @@ PROGRAM MPCA
             bestParticleProcessor = bestParticle(contP)
         end if
     END DO
-    ! NESTE PONTO SABEMOS QUE bestParticla, oldParticle E bestParticleProcessor
-    ! SAO IDENTICOS PORQUE ESTAMOS DENTRO DO LOOP POPULACAO INICIAL
 
     !***************************************************************************
     ! PRINCIPAL LOOP                                                            
@@ -368,7 +365,7 @@ PROGRAM MPCA
             END DO
 
             call blackboard(bestParticleProcessor, st % NFE, st % higherNFE, st % totalNFE, st % doStop, &
-            & doStopMPCA, pBest, op)
+            & doStopMPCA, op, st)
             
             DO contP = 1, op % nParticlesProcessor
                 bestParticle(contP) = bestParticleProcessor
@@ -388,25 +385,29 @@ PROGRAM MPCA
     END DO
 
     call blackboard(bestParticleProcessor, st % NFE, st % higherNFE, st % totalNFE, st % doStop, &
-            & doStopMPCA, pBest, op)
+            & doStopMPCA, op, st)
+
     DO contP = 1, op % nParticlesProcessor
         bestParticle(contP) = bestParticleProcessor
     END DO
 
     IF (op % iProcessor == 0) THEN
+        call copyFileBest(op, st)
+    END IF
+
+    IF (op % iProcessor == 0) THEN
         OPEN(UNIT = 20, FILE = './output/final.out', ACCESS = 'APPEND')
-        
-        write(20, '(ES14.6E2)', ADVANCE = 'NO') bestParticleProcessor % fitness
-        write(20, '(I2)', ADVANCE = 'NO') nint(bestParticleProcessor % solution(1))
-        write(20, '(I3)', ADVANCE = 'NO') nint(bestParticleProcessor % solution(2))
-        IF (nint(bestParticleProcessor % solution(1)) == 2) THEN
-            write(20, '(I3)', ADVANCE = 'NO') nint(bestParticleProcessor % solution(3))
+        write(20, '(ES14.6E2)',ADVANCE="NO") bestParticleProcessor % fitness
+        write(20, '(I2)',ADVANCE="NO") ceiling(bestParticleProcessor % solution(1))
+        write(20, '(I3)',ADVANCE="NO") ceiling(bestParticleProcessor % solution(2))
+        IF (ceiling(bestParticleProcessor % solution(1)) .GT. 1) THEN
+            write(20, '(I3)',ADVANCE="NO") ceiling(bestParticleProcessor % solution(3))
         ELSE
-            write(20, '(I3)', ADVANCE = 'NO') 0
+            write(20, '(I3)',ADVANCE="NO") 0
         END IF
-        write(20, '(I2)', ADVANCE = 'NO') nint(bestParticleProcessor % solution(4))
-        write(20, '(ES14.6E2)', ADVANCE = 'NO') bestParticleProcessor % solution(5)
-        write(20, '(ES14.6E2)') bestParticleProcessor % solution(6)
+        write(20, '(I2)',ADVANCE="NO") ceiling(bestParticleProcessor % solution(4))
+        write(20, '(ES14.6E2)',ADVANCE="NO") bestParticleProcessor % solution(5)
+        write(20, '(ES14.6E2)',ADVANCE="NO") bestParticleProcessor % solution(6)
         
         CLOSE(20)
 

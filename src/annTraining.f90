@@ -450,8 +450,7 @@ CONTAINS
 
         ! Store configuration if objFunction is best
         if (neuralNetworkTraining < st % bestObjectiveFunction) then
-            
-            
+
             st % bestObjectiveFunction = neuralNetworkTraining
 
             IF (op % iProcessor < 9) THEN
@@ -472,11 +471,16 @@ CONTAINS
 
             OPEN(12, FILE = './output/ann' // trim(str1) // '_' // trim(str0) // '.out')
 
+            WRITE(12, '(A)', advance = 'no') 'Objective Function (MPCA) :'
             write(12, '(ES14.6E2)') st % bestObjectiveFunction
-	    write(12, '(I3)') config % activationFunction
+            WRITE(12, '(A)', advance = 'no') 'Activation Function :'
+	        write(12, '(I3)') config % activationFunction
+            WRITE(12, '(A)', advance = 'no') 'Hidden Layers :'
             write(12, '(I3)') config % hiddenLayers
+            WRITE(12, '(A)', advance = 'no') 'Neurons First Layer :'
             write(12, '(I3)') config % neuronsLayer(1)
             if (config % hiddenLayers == 2) then
+                WRITE(12, '(A)', advance = 'no') 'Neurons Second Layer :'
                 write(12, '(I3)') config % neuronsLayer(2)
             end if
 
@@ -515,7 +519,6 @@ CONTAINS
 
             write(12, '(A)') 'bs'
             write(12, fString) (config % bs(k), k = 1, op % nOutputs)
-
             write(12, '(A)', advance = 'no') 'Alpha: '
             write(12, '(F13.4)') config % alpha
             write(12, '(A)', advance = 'no') 'Eta: '
@@ -547,6 +550,8 @@ CONTAINS
 
             CLOSE(12)
         end if
+
+        neuralNetworkTraining = st % bestObjectiveFunction
 
         deallocate(error)
         deallocate(errorClass)
