@@ -38,3 +38,11 @@ runMPCA
 
 # Arquivos de saida
 ./output
+*.out
+*.best
+fort.*
+
+annActivation
+annMLP
+annMPCA
+annTest
