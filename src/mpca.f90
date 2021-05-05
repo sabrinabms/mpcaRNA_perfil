@@ -17,7 +17,7 @@ PROGRAM MPCA
     INCLUDE 'mpif.h'
 
     !**********************
-    ! VARIABLES DEFINITION 
+    ! VARIABLES DEFINITION
     !**********************
     integer :: iSeed, contD, contP, iCycleBlackboard, iError
     integer :: nSeed, un, istat, it, nDimensions, paramRNA, i, j
@@ -41,9 +41,10 @@ PROGRAM MPCA
     TYPE (Particle) :: bestParticleProcessor
     TYPE (OptionsMPCA) :: op
     TYPE (StatusMPCA) :: st
-    
+
     INTEGER (kind = 8) :: nClasses
     INTEGER (kind = 8) :: nClassesValidation
+    INTEGER (kind = 8) :: nClassesGeneralization
     INTEGER (kind = 8) :: nInputs
     INTEGER (kind = 8) :: nOutputs
     REAL (kind = 8) :: targetError
@@ -69,19 +70,18 @@ PROGRAM MPCA
     real (kind = 8) :: initial_Alpha
     real (kind = 8) :: initial_Eta
     logical :: doStopMPCA = .false.
-    
-    
-    
-    NAMELIST /content/ nClasses, nClassesValidation, &
+
+
+ NAMELIST /content/ nClasses, nClassesValidation, nClassesGeneralization, &
         nInputs, nOutputs, &
         targetError, nEpochs, &
         loadWeightsBias, &
         haveValidation, &
         tryInitialArchitecture
 !        tryFixedConfiguration
-    
+
     NAMELIST /bounds/ lower_Hidden_Layers, &
-        upper_Hidden_Layers, & 
+        upper_Hidden_Layers, &
         lower_First_Hidden_Layer, &
         upper_First_Hidden_Layer, &
         lower_Second_Hidden_Layer, &
@@ -92,14 +92,14 @@ PROGRAM MPCA
         upper_Alpha, &
         lower_Eta, &
         upper_Eta
-        
+
     NAMELIST /initial/ initial_Hidden_Layers, &
         initial_First_Hidden_Layer, &
         initial_Second_Hidden_Layer, &
         initial_Activation_Function, &
         initial_Alpha, &
         initial_Eta
-    
+
     REAL (kind = 8) :: value_to_reach
     INTEGER :: particles_processor
     INTEGER (kind = 8) :: maximum_nfe_mpca
@@ -115,8 +115,8 @@ PROGRAM MPCA
     REAL (kind = 8) :: rho_hooke_jeeves
     INTEGER (kind = 8) :: maximum_nfe_hooke_jeeves
     LOGICAL :: verbose
-    
-    NAMELIST /algorithm_configuration/ value_to_reach, & 
+
+    NAMELIST /algorithm_configuration/ value_to_reach, &
         particles_processor, &
         maximum_nfe_mpca, &
         cycle_blackboard_mpca, &
@@ -133,15 +133,15 @@ PROGRAM MPCA
         verbose
 
     !******************
-    ! INITIALIZING MPI 
+    ! INITIALIZING MPI
     !******************
     CALL MPI_Init(iError)
     CALL MPI_Comm_Size(MPI_COMM_WORLD, op % nProcessors, iError)
     CALL MPI_Comm_Rank(MPI_COMM_WORLD, op % iProcessor, iError)
 
     !*********************************************
-    ! SETTING PARAMETERS                          
-    ! 1 - Number of the experiment                
+    ! SETTING PARAMETERS
+    ! 1 - Number of the experiment
     !*********************************************
     CALL getarg(1, string)
     READ (string, '(I10)') op % iExperiment
@@ -152,7 +152,7 @@ PROGRAM MPCA
       ACTION='READ')
     read(1, algorithm_configuration)
     close(1)
-    
+
     op % maxNFE = maximum_nfe_mpca
     op % isOppositionEnabled = enable_opposition
     op % typeOpposition = type_opposition
@@ -182,7 +182,7 @@ PROGRAM MPCA
         WRITE (str1, '(I2)') op % iExperiment
     END IF
 
-    if (op % iProcessor == 0) then       
+    if (op % iProcessor == 0) then
         if (op % verbose .eqv. .true.) then
             str = integer_to_string(op % iExperiment, 3)
             CALL start_section2('Experiment ' // trim(str), 'normal')
@@ -203,16 +203,17 @@ PROGRAM MPCA
         allocate(bestParticle(contP) % solution(op % nDimensions))
     END DO
     allocate(realSolution(op % nDimensions))
-    
+
     OPEN(1, FILE='./config/configuration.ini', STATUS='OLD',  &
       ACTION='READ')
     read(1, content)
     read(1, bounds)
     read(1, initial)
     close(1)
-    
+
     op % nClasses = nClasses
     op % nClassesValidation = nClassesValidation
+    op % nClassesGeneralization = nClassesGeneralization
     op % nInputs = nInputs
     op % nOutputs = nOutputs
     op % targetError = targetError
@@ -231,7 +232,7 @@ PROGRAM MPCA
     op % upperBound(4) = upper_Activation_Function
     op % upperBound(5) = upper_Alpha
     op % upperBound(6) = upper_Eta
-    
+
     !------------------------------------------------------------!
     !LENDO OS PARAMETROS DO ARQUIVO DE ENTRADA
     !------------------------------------------------------------!
@@ -256,7 +257,7 @@ PROGRAM MPCA
     if (op % haveValidation .eqv. .true.) then
         allocate(op % x_valid(op % nInputs, op % nClassesValidation))
         allocate(op % y_valid(op % nOutputs, op % nClassesValidation))
-        
+
         write(fString(2:7), '(I6)') op % nClassesValidation
 
         OPEN (1, file = './data/y_valid.txt')
@@ -278,6 +279,7 @@ PROGRAM MPCA
     st % NFE = 0
     st % lastUpdate = 0
     st % totalNFE = 0
+    st % iBest = 0
     st % higherNFE = 0
     st % flag = .false.
     st % bestObjectiveFunction = huge(0.D0)
@@ -290,10 +292,11 @@ PROGRAM MPCA
     bestParticleProcessor % fitness = huge(0.D0)
 
     !*****************************
-    ! CREATING INITIAL POPULATION 
+    ! CREATING INITIAL POPULATION
     !*****************************
 
     DO contP = 1, op % nParticlesProcessor
+
         if (contP == 1 .and. tryInitialArchitecture .eqv. .true.) then
             oldParticle(contP) % solution(1) = initial_Hidden_Layers
             oldParticle(contP) % solution(2) = initial_First_Hidden_Layer
@@ -316,6 +319,7 @@ PROGRAM MPCA
         IF (oldParticle(contP) % fitness < bestParticle(contP) % fitness) THEN
             bestParticle(contP) = oldParticle(contP)
         END IF
+
     END DO
 
     DO contP = 1, op % nParticlesProcessor
@@ -323,9 +327,9 @@ PROGRAM MPCA
             bestParticleProcessor = bestParticle(contP)
         end if
     END DO
-    
+
     !***************************************************************************
-    ! PRINCIPAL LOOP                                                            
+    ! PRINCIPAL LOOP
     !***************************************************************************
     DO WHILE ((st % higherNFE .LE. op % maxNFE / op % nProcessors) &
         .and. (st % NFE .LE. op % maxNFE / op % nProcessors) &
@@ -345,7 +349,7 @@ PROGRAM MPCA
             ELSE
                 CALL Scattering(oldParticle(contP), newParticle(contP), bestParticle(contP), op, st)
             END IF
-            
+
             if(st % doStop) then
                 exit
             end if
@@ -362,80 +366,84 @@ PROGRAM MPCA
                 end if
             END DO
 
-            call blackboard(bestParticleProcessor, st % NFE, st % higherNFE, st % totalNFE, st % doStop, doStopMPCA, op)
-            
+            call blackboard(bestParticleProcessor, st % NFE, st % higherNFE, st % totalNFE, st % doStop, &
+            & doStopMPCA, op, st)
+
             DO contP = 1, op % nParticlesProcessor
                 bestParticle(contP) = bestParticleProcessor
             END DO
             st % lastUpdate = st % NFE
-            
+
         END IF
     END DO
-    
+
     !*************************
-    ! FINAL BLACKBOARD UPDATE 
-    !************************* 
+    ! FINAL BLACKBOARD UPDATE
+    !*************************
     DO contP = 1, op % nParticlesProcessor
         if (bestParticle(contP) % fitness < bestParticleProcessor % fitness) then
             bestParticleProcessor = bestParticle(contP)
         end if
     END DO
-    
-    call blackboard(bestParticleProcessor, st % NFE, st % higherNFE, st % totalNFE, st % doStop, doStopMPCA, op)
-            
+
+    call blackboard(bestParticleProcessor, st % NFE, st % higherNFE, st % totalNFE, st % doStop, &
+            & doStopMPCA, op, st)
+
     DO contP = 1, op % nParticlesProcessor
         bestParticle(contP) = bestParticleProcessor
     END DO
 
-    if (op % iProcessor == 0) then    
+    IF (op % iProcessor == 0) THEN
+        call copyFileBest(op, st)
+    END IF
+
+    IF (op % iProcessor == 0) THEN
         OPEN(UNIT = 20, FILE = './output/final.out', ACCESS = 'APPEND')
-        
-        write(20, '(ES14.6E2)', ADVANCE = 'NO') bestParticleProcessor % fitness
-        write(20, '(I2)', ADVANCE = 'NO') nint(bestParticleProcessor % solution(1))
-        write(20, '(I3)', ADVANCE = 'NO') nint(bestParticleProcessor % solution(2))
-        if (nint(bestParticleProcessor % solution(1)) == 2) then
-            write(20, '(I3)', ADVANCE = 'NO') nint(bestParticleProcessor % solution(3))
-        else
-            write(20, '(I3)', ADVANCE = 'NO') 0
-        end if
-        write(20, '(I2)', ADVANCE = 'NO') nint(bestParticleProcessor % solution(4))
-        write(20, '(ES14.6E2)', ADVANCE = 'NO') bestParticleProcessor % solution(5)
-        write(20, '(ES14.6E2)') bestParticleProcessor % solution(6)
-        
+        write(20, '(ES14.6E2)',ADVANCE="NO") bestParticleProcessor % fitness
+        write(20, '(I2)',ADVANCE="NO") ceiling(bestParticleProcessor % solution(1))
+        write(20, '(I3)',ADVANCE="NO") ceiling(bestParticleProcessor % solution(2))
+        IF (ceiling(bestParticleProcessor % solution(1)) .GT. 1) THEN
+            write(20, '(I3)',ADVANCE="NO") ceiling(bestParticleProcessor % solution(3))
+        ELSE
+            write(20, '(I3)',ADVANCE="NO") 0
+        END IF
+        write(20, '(I2)',ADVANCE="NO") ceiling(bestParticleProcessor % solution(4))
+        write(20, '(ES14.6E2)',ADVANCE="NO") bestParticleProcessor % solution(5)
+        write(20, '(ES14.6E2)',ADVANCE="NO") bestParticleProcessor % solution(6)
+
         CLOSE(20)
 
-        if (op % verbose .eqv. .true.) then                    
+        IF (op % verbose .eqv. .true.) THEN
             write(*,FMT="(A1,A,t25,I10,A,I10)",ADVANCE="NO") achar(13), &
                 & "NFE (total): ", &
                 & st % totalNFE, &
                 & " of ", &
                 & op % maxNFE
             write(*,*)
-            
+
             call write_formatted('Best objective function value: ', 'bright normal', &
                 real_to_string_scientific(bestParticleProcessor % fitness, 1, 4, 3), 'normal')
-        
             call write_formatted('Number of hidden layers: ', 'bright normal', &
                 integer_to_string(nint(bestParticleProcessor % solution(1)), 2), 'normal')
             call write_formatted('Neurons in hidden layer 1: ', 'bright normal', &
                 integer_to_string(nint(bestParticleProcessor % solution(2)), 2), 'normal')
-            if (nint(bestParticleProcessor % solution(1)) == 2) then
+            IF (nint(bestParticleProcessor % solution(1)) == 2) THEN
                 call write_formatted('Neurons in hidden layer 2: ', 'bright normal', &
                     integer_to_string(nint(bestParticleProcessor % solution(3)), 2), 'normal')
-            end if
-            
+            END IF
+
             call write_formatted('Activation function: ', 'bright normal', &
                 integer_to_string(nint(bestParticleProcessor % solution(4)), 2), 'normal')
-            
+
             call write_formatted('Alpha: ', 'bright normal', &
                 real_to_string(bestParticleProcessor % solution(5), 1, 4), 'normal')
             call write_formatted('Eta: ', 'bright normal', &
                 real_to_string(bestParticleProcessor % solution(6), 1, 4), 'normal')
-                
+
             call end_section('', 'normal')
-        end if
-    end if
-    
+        END IF
+    END IF
+
     ! FINALIZING
 
     deallocate(oldParticle)
@@ -451,25 +459,25 @@ PROGRAM MPCA
         deallocate(op % y_valid)
     end if
 
-
     CALL MPI_Finalize(iError)
+
 END PROGRAM MPCA
 
 SUBROUTINE init_random_seed(op)
     use newTypes
-    
+
     INTEGER :: i, n, clock
     INTEGER, DIMENSION(:), ALLOCATABLE :: seed
     TYPE (OptionsMPCA), intent(in) :: op
-          
+
     CALL RANDOM_SEED(size = n)
     ALLOCATE(seed(n))
-          
+
     CALL SYSTEM_CLOCK(COUNT=clock)
-          
+
     seed = clock + 37 * (/ (i - 1, i = 1, n) /)
     seed = seed * (op % iProcessor + 1)
     CALL RANDOM_SEED(PUT = seed)
-          
+
     DEALLOCATE(seed)
 END SUBROUTINE

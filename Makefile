@@ -14,7 +14,7 @@ VPATH = src
 MODDIR = mod
 BUILDDIR = build
 
-all: mkBuildDir clean $(BUILDDIR)/foul.o \
+all: clean $(BUILDDIR)/foul.o \
 	$(BUILDDIR)/newTypes.o \
 	$(BUILDDIR)/uniformR8.o \
 	$(BUILDDIR)/normalR8.o \
@@ -43,12 +43,10 @@ $(BUILDDIR)/%.o: $(VPATH)/%.f90
 	$(CC) $(CFLAG) $< -o $@
 
 clean:
-	rm -rf *.*~ Makefile~  build/*.o *.mod annActivation annTest annMPCA
-#	rm -rf *.*~ Makefile~ output/*.* build/*.o *.mod annActivation annTest annMPCA
+	#rm -rf *.*~ Makefile~  build/*.o *.mod annActivation annTest annMPCA
+	rm -rf *.*~ Makefile~ output/*.* build/*.o *.mod annActivation annTest annMPCA
 
 
 removemod:
 	rm -f build/*.o *.mod
 	rm -f *.mod
-mkBuildDir: 
-	mkdir $(BUILDDIR)

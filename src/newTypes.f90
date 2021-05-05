@@ -36,6 +36,7 @@ TYPE :: OptionsMPCA
     !MLP
     INTEGER (kind = 8) :: nClasses
     INTEGER (kind = 8) :: nClassesValidation
+    INTEGER (kind = 8) :: nClassesGeneralization
     INTEGER (kind = 8) :: nInputs
     INTEGER (kind = 8) :: nOutputs
     REAL (kind = 8) :: targetError
@@ -58,6 +59,7 @@ TYPE :: StatusMPCA
     INTEGER (kind = 8) :: higherNFE
     INTEGER (kind = 8) :: lastUpdate
     INTEGER (kind = 8) :: totalNFE
+    INTEGER (kind = 8) :: iBest
     LOGICAL :: flag
     REAL (kind = 8), ALLOCATABLE, DIMENSION(:) :: minB
     REAL (kind = 8), ALLOCATABLE, DIMENSION(:) :: maxB
@@ -75,6 +77,7 @@ TYPE :: annConfig
     REAL (kind = 8), ALLOCATABLE, DIMENSION(:) :: bs
     integer :: nClasses
     integer :: nClassesValidation
+    integer :: nClassesGeneralization
     integer :: nInputs
     integer :: nOutputs
     integer :: hiddenLayers
