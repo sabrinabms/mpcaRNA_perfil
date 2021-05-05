@@ -40,7 +40,6 @@ runMPCA
 ./output
 *.out
 *.best
-<<<<<<< Updated upstream
 fort.*
 
 annActivation
@@ -49,4 +48,3 @@ annMPCA
 annTest
 =======
 fort.*
->>>>>>> Stashed changes
