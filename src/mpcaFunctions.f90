@@ -1,18 +1,20 @@
 !***************************************************************!
-! MPCA functions						!
+! MPCA functions						                        !
 !***************************************************************!
 ! Desenvolvido por: Eduardo Favero Pacheco da Luz (CAP/INPE)	!
-! Modificado por: Reynier Hernández Torres (CAP/INPE)		!
-! Baseado no PCA por Wagner F. Sacco				!
-! Atualizacao: 03-Nov-2014					!
+! Modificado por: Reynier Hernández Torres (CAP/INPE)		    !
+! Baseado no PCA por Wagner F. Sacco				            !
+! Atualizacao: 03-Nov-2014					                    !
 !***************************************************************!
 MODULE mpcaFunctions
 
     USE newTypes
     USE annTraining
-    
+
 CONTAINS
+
     SUBROUTINE Perturbation(oldParticle, newParticle, bestParticle, op, st)
+
         IMPLICIT NONE
         INTEGER :: contD
         REAL (kind = 8) :: alea
@@ -36,16 +38,17 @@ CONTAINS
                 newParticle % solution(contD) = op % lowerBound(contD)
             END IF
         END DO
-        
+
         newParticle % fitness = neuralNetworkTraining(newParticle % solution, op, st)
         st % NFE = st % NFE + 1
-        
+
         IF (newParticle % fitness .LT. bestParticle % fitness) THEN
             bestParticle = newParticle
         END IF
-        
+
     END SUBROUTINE
 
+    !********************************************************************
     !********************************************************************
     SUBROUTINE Exploration(oldParticle, newParticle, bestParticle, op, st)
         IMPLICIT NONE
@@ -58,13 +61,13 @@ CONTAINS
 
         DO l2 = 1, op % iterPerturbation
             CALL Small_Perturbation(oldParticle, newParticle, bestParticle, op, st)
-            
+
             newParticle % fitness = neuralNetworkTraining(newParticle % solution, op, st)
 
             IF (newParticle % fitness .LT. oldParticle % fitness) THEN
                 oldParticle = newParticle
             END IF
-            
+
             IF (newParticle % fitness .LT. bestParticle % fitness) THEN
                 bestParticle = newParticle
             END IF
@@ -72,7 +75,7 @@ CONTAINS
             if ((bestParticle % fitness < op % emin) .and. (st % flag .eqv. .false.)) then
                 st % flag = .true.
             end if
-            
+
             if (st % NFE >= op % maxNFE / op % nProcessors) then
                 st % doStop = .true.
                 return
@@ -80,6 +83,7 @@ CONTAINS
         END DO
     END SUBROUTINE
 
+    !********************************************************************
     !********************************************************************
     SUBROUTINE Small_Perturbation(oldParticle, newParticle, bestParticle, op, st)
         IMPLICIT NONE
@@ -127,7 +131,7 @@ CONTAINS
                 newParticle % solution(contD) = op % lowerBound(contD)
             END IF
         END DO
-        
+
         newParticle % fitness = neuralNetworkTraining(newParticle % solution, op, st)
         st % NFE = st % NFE + 1
 
@@ -136,6 +140,7 @@ CONTAINS
         DEALLOCATE(alea)
     END SUBROUTINE
 
+    !********************************************************************
     !********************************************************************
     SUBROUTINE Scattering(oldParticle, newParticle, bestParticle, op, st)
         IMPLICIT NONE
@@ -163,7 +168,7 @@ CONTAINS
                 oldParticle % solution(l2) = (alea * (op % upperBound(l2) - op % lowerBound(l2))) &
                 +op % lowerBound(l2)
             END DO
-            
+
             oldParticle % fitness = neuralNetworkTraining(oldParticle % solution, op, st)
             st % NFE = st % NFE + 1
 
@@ -175,7 +180,7 @@ CONTAINS
                 st % flag = .true.
             end if
         END IF
-        
+
         CALL Exploration(oldParticle, newParticle, bestParticle, op, st)
 
     END SUBROUTINE
@@ -184,128 +189,137 @@ CONTAINS
     !********************************************************************
     !********************************************************************
     !********************************************************************
-    SUBROUTINE blackboard(bo, NFE, higherNFE, totalNFE, doStop, doStopMPCA, op)
-    USE newtypes
+    SUBROUTINE blackboard(bo, NFE, higherNFE, totalNFE, doStop, doStopMPCA, op, st)
+        USE newtypes
 
-    implicit none
-    INCLUDE 'mpif.h'
+        implicit none
+        INCLUDE 'mpif.h'
 
-    INTEGER :: i, iBest, j, ierr, status(MPI_STATUS_SIZE), stopCount
-    INTEGER (kind=8), INTENT(in) :: NFE
-    INTEGER (kind=8), INTENT(inout) :: higherNFE, totalNFE
-    INTEGER :: world_rank, world_size, nDimensions
-    logical, intent(inout) :: doStop, doStopMPCA
+        INTEGER :: i, j, ierr, status(MPI_STATUS_SIZE), stopCount
+        INTEGER (kind=8), INTENT(in) :: NFE
+        INTEGER (kind=8), INTENT(inout) :: higherNFE, totalNFE
+        INTEGER :: world_rank, world_size, nDimensions
+        logical, intent(inout) :: doStop, doStopMPCA
 
-    type (Particle), intent(inout) :: bo
-    TYPE(OptionsMPCA), intent(in) :: op
-    real (kind = 8), allocatable, dimension(:) :: send
+        type (Particle), intent(inout) :: bo
+        TYPE(OptionsMPCA), intent(in) :: op
+        TYPE (StatusMPCA), INTENT(INOUT) :: st
+        real (kind = 8), allocatable, dimension(:) :: send
 
-    world_rank = op % iProcessor
-    world_size = op % nProcessors
-    nDimensions = op % nDimensions
-    
-    if (world_size == 1) then
-        call copyFileBest(op, 0)
-        higherNFE = NFE
-        totalNFE = NFE
-        doStopMPCA = doStop
-        return
-    end if
-    
-    ALLOCATE(send(nDimensions + 4))
+        world_rank = op % iProcessor !IDENTIFICADOR DO PROCESSADOR
+        world_size = op % nProcessors !NUMERO TOTAL DE PROCESSADORES
+        nDimensions = op % nDimensions
 
-    stopCount = 0
-    IF (world_rank .EQ. 0) THEN
-        higherNFE = NFE
-        totalNFE = NFE
+        if (world_size == 1) then
+!            call copyFileBest(op, st)
+            higherNFE = NFE
+            totalNFE = NFE
+            doStopMPCA = doStop
+            return
+        end if
 
-        iBest = 0
-        DO i = 1, world_size - 1
-            CALL MPI_Recv(send, nDimensions + 4, MPI_REAL8, i, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE, ierr)
+        ALLOCATE(send(nDimensions + 4))
 
-            IF (INT(send(nDimensions + 2)) .GT. higherNFE) THEN
-                higherNFE = INT8(send(nDimensions + 2))
-            END IF
+        stopCount = 0
+        IF (world_rank .EQ. 0) THEN
+            higherNFE = NFE
+            totalNFE = NFE
 
-            totalNFE = totalNFE + INT8(send(nDimensions + 2))
+            print*,' '
+            print*,'(a) Processador com a melhor particula:', st % iBest
+            print*,' Melhor particula: ', bo % fitness
+            print*,' '
 
-            IF (send(nDimensions + 1) < bo % fitness) THEN
-                DO j = 1, nDimensions
-                    bo % solution(j) = send(j)
-                ENDDO
-                bo % fitness = send(nDimensions + 1)
-                iBest = i
-            ENDIF
+            DO i = 1, world_size - 1
+                CALL MPI_Recv(send, nDimensions + 4, MPI_REAL8, i, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE, ierr)
 
-            if (send(nDimensions + 3) > 0) then
-                stopCount = stopCount + 1;
+                IF (INT(send(nDimensions + 2)) .GT. higherNFE) THEN
+                    higherNFE = INT8(send(nDimensions + 2))
+                END IF
+
+                totalNFE = totalNFE + INT8(send(nDimensions + 2))
+
+                IF (send(nDimensions + 1) < bo % fitness) THEN
+                    DO j = 1, nDimensions
+                        bo % solution(j) = send(j)
+                    ENDDO
+                    bo % fitness = send(nDimensions + 1)
+                    st % iBest = i
+                ENDIF
+
+                if (send(nDimensions + 3) > 0) then
+                    stopCount = stopCount + 1;
+                end if
+            ENDDO
+
+            DO i = 1, nDimensions
+                send(i) = bo % solution(i)
+            END DO
+
+            send(nDimensions + 1) = bo % fitness
+            send(nDimensions + 2) = DFLOAT(higherNFE)
+            send(nDimensions + 3) = DFLOAT(totalNFE)
+            send(nDimensions + 4) = DFLOAT(stopCount)
+
+            CALL MPI_Bcast(send, nDimensions + 4, MPI_REAL8, 0, MPI_COMM_WORLD, ierr)
+
+            if (send(nDimensions + 4) > 0.9) then
+                doStopMPCA = .true.
+            else
+                doStopMPCA = .false.
             end if
-        ENDDO
 
-        DO i = 1, nDimensions
-            send(i) = bo % solution(i)
-        END DO
+            print*,' '
+            print*,'(b) Processador com a melhor particula:', st % iBest
+            print*,' Melhor particula: ', bo % fitness
+            print*,' '
 
-        send(nDimensions + 1) = bo % fitness
-        send(nDimensions + 2) = DFLOAT(higherNFE)
-        send(nDimensions + 3) = DFLOAT(totalNFE)
-        send(nDimensions + 4) = DFLOAT(stopCount)
+!            call copyFileBest(op, iBest)
 
-        CALL MPI_Bcast(send, nDimensions + 4, MPI_REAL8, 0, MPI_COMM_WORLD, ierr)
+        ELSE
+            DO i = 1, nDimensions
+                send(i) = bo % solution(i)
+            END DO
 
-        if (send(nDimensions + 4) > 0.9) then
-            doStopMPCA = .true.
-        else
-            doStopMPCA = .false.
-        end if
-        
-        call copyFileBest(op, iBest)
+            send(nDimensions + 1) = bo % fitness
+            send(nDimensions + 2) = DFLOAT(NFE)
 
-    ELSE
-        DO i = 1, nDimensions
-            send(i) = bo % solution(i)
-        END DO
+            if (doStop .eqv. .true.) then
+                send(nDimensions + 3) = DFLOAT(1);
+            else
+                send(nDimensions + 3) = DFLOAT(0);
+            end if
 
-        send(nDimensions + 1) = bo % fitness
-        send(nDimensions + 2) = DFLOAT(NFE)
-        
-        if (doStop .eqv. .true.) then
-            send(nDimensions + 3) = DFLOAT(1);
-        else
-            send(nDimensions + 3) = DFLOAT(0);
-        end if
-        
-        send(nDimensions + 4) = DFLOAT(0);
+            send(nDimensions + 4) = DFLOAT(0);
 
-        CALL MPI_Send(send, nDimensions + 4, MPI_REAL8, 0, 0, MPI_COMM_WORLD, ierr)
+            CALL MPI_Send(send, nDimensions + 4, MPI_REAL8, 0, 0, MPI_COMM_WORLD, ierr)
 
-        CALL MPI_Bcast(send, nDimensions + 4, MPI_REAL8, 0, MPI_COMM_WORLD, ierr)
+            CALL MPI_Bcast(send, nDimensions + 4, MPI_REAL8, 0, MPI_COMM_WORLD, ierr)
 
-        bo % solution = send(1:nDimensions)
-        bo % fitness = send(nDimensions + 1)
-        higherNFE = INT8(send(nDimensions + 2))
-        totalNFE = INT8(send(nDimensions + 3))
+            bo % solution = send(1:nDimensions)
+            bo % fitness = send(nDimensions + 1)
+            higherNFE = INT8(send(nDimensions + 2))
+            totalNFE = INT8(send(nDimensions + 3))
 
-        if (send(nDimensions + 4) > 0.9) then
-        doStopMPCA = .true.
-    else
-        doStopMPCA = .false.
-        end if
+            if (send(nDimensions + 4) > 0.9) then
+                doStopMPCA = .true.
+            else
+                doStopMPCA = .false.
+            end if
 
-    END IF
+        END IF
 
-    deallocate(send)
+        deallocate(send)
 
-END SUBROUTINE blackboard
+    END SUBROUTINE blackboard
 
-!********************************************************************
-!********************************************************************
-!********************************************************************
-!********************************************************************
-    
     !********************************************************************
-        function best_nearby(delta, point, prevbest, nvars, f, funevals, lb, ub)
-        
+    !********************************************************************
+    !********************************************************************
+    !********************************************************************
+    !********************************************************************
+    function best_nearby(delta, point, prevbest, nvars, f, funevals, lb, ub)
+
         implicit none
 
         integer ( kind = 4) nvars
@@ -337,14 +351,13 @@ END SUBROUTINE blackboard
 
             ftmp = f(z, nvars)
             funevals = funevals + 1
-            
-            
+
             if (ftmp < minf) then
                 minf = ftmp
             else
                 delta(i) = -delta(i)
                 z(i) = point(i) + delta(i)
-                
+
                 if (z(i) .lt. lb(i)) then
                     z(i) = lb(i)
                 elseif (z(i) .gt. ub(i)) then
@@ -367,7 +380,7 @@ END SUBROUTINE blackboard
 
         return
     end function best_nearby
-    
+
     !*****************************************************************
     function hooke(nvars, startpt, endpt, rho, eps, nfemax, f, lb, ub)
         implicit none
@@ -456,13 +469,13 @@ END SUBROUTINE blackboard
                     tmp = xbefore(i)
                     xbefore(i) = newx(i)
                     newx(i) = newx(i) + newx(i) - tmp
-                    
+
                     if (newx(i) .lt. lb(i)) then
                         newx(i) = lb(i)
                     elseif (newx(i) .gt. ub(i)) then
                         newx(i) = ub(i)
                     end if
-                        
+
                 end do
 
                 fbefore = newf
@@ -503,23 +516,27 @@ END SUBROUTINE blackboard
 
         return
     end function hooke
-    
-    
-    subroutine copyFileBest(op, iBest)
+
+    !*****************************************************************
+    SUBROUTINE copyFileBest(op, st)
         implicit none
-    
-        character (100) :: str0, str1, filename, command
-        integer :: iBest
+
+        CHARACTER (100) :: str0, str1, filename, command
         TYPE(OptionsMPCA), intent(in) :: op
-    
-        IF (iBest < 9) THEN
-            WRITE (str0, '(I1)') iBest + 1
-        ELSE IF (iBest < 99) THEN
-            WRITE (str0, '(I2)') iBest + 1
+        TYPE (StatusMPCA), INTENT(INOUT) :: st
+
+        print*,' '
+        print*,'(c) Processador com a melhor particula:', st % iBest
+        print*,' '
+
+        IF (st % iBest < 9) THEN
+            WRITE (str0, '(I1)') st % iBest + 1
+        ELSE IF (st % iBest < 99) THEN
+            WRITE (str0, '(I2)') st % iBest + 1
         ELSE
-            WRITE (str0, '(I3)') iBest + 1
+            WRITE (str0, '(I3)') st % iBest + 1
         END IF
-    
+
         IF (op % iExperiment < 10) THEN
             WRITE (str1, '(I1)') op % iExperiment
         ELSE IF (op % iExperiment < 100) THEN
@@ -531,6 +548,7 @@ END SUBROUTINE blackboard
         filename = './output/ann' // trim(str1) // '_' // trim(str0) // '.out'
         command = 'cp ' // TRIM(filename) // ' ./output/ann' // trim(str1) // '.best'
         call system(TRIM(command))
-        
-    end subroutine copyFileBest
+
+    END SUBROUTINE copyFileBest
+
 END MODULE mpcaFunctions
