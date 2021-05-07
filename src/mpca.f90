@@ -148,10 +148,9 @@ PROGRAM MPCA
 
     op % nDimensions = 6
 
-    OPEN(1, FILE='./config/configuration.ini', STATUS='OLD',  &
-      ACTION='READ')
-    read(1, algorithm_configuration)
-    close(1)
+    OPEN(1, FILE='./config/configuration.ini', STATUS='OLD', ACTION='READ')
+    READ(1, algorithm_configuration)
+    CLOSE(1)
 
     op % maxNFE = maximum_nfe_mpca
     op % isOppositionEnabled = enable_opposition
@@ -186,6 +185,11 @@ PROGRAM MPCA
         if (op % verbose .eqv. .true.) then
             str = integer_to_string(op % iExperiment, 3)
             CALL start_section2('Experiment ' // trim(str), 'normal')
+        end if
+        if (op % iExperiment == 1) then
+            OPEN(UNIT = 20, FILE = './output/final.out', ACCESS = 'APPEND')
+            WRITE(20,*)'F.OBJ, N.CAM, N.NEUR C1, N.NEUR C2, F.ATIV, ALFA, ETA'
+            CLOSE(20)
         end if
     end if
 
@@ -410,7 +414,6 @@ PROGRAM MPCA
         write(20, '(I2)',ADVANCE="NO") ceiling(bestParticleProcessor % solution(4))
         write(20, '(ES14.6E2)',ADVANCE="NO") bestParticleProcessor % solution(5)
         write(20, '(ES14.6E2)',ADVANCE="NO") bestParticleProcessor % solution(6)
-
         CLOSE(20)
 
         IF (op % verbose .eqv. .true.) THEN

@@ -51,15 +51,18 @@ CONTAINS
         config % nOutputs = nOutputs
 
         open (unit = 20, file = './output/final.out', status = 'old', action = 'read')
+        read(20, '(A)') dummy
 
         bfitness = 1e+10
         do iExperiment = 1, nExperiments
             read(20, '(ES14.6E2,I2,I3,I3,I2,ES14.6E2,ES14.6E2)') &
-            efitness, hiddenLayers, neuronsLayer(1), neuronsLayer(2), activationFunction, &
-            eta, alpha
-!            write(*, '(ES14.6E2,I2,I3,I3,I2,ES14.6E2,ES14.6E2)') &
-!            efitness, hiddenLayers, neuronsLayer(1), neuronsLayer(2), activationFunction, &
-!            eta, alpha
+                    efitness, &
+                    hiddenLayers, &
+                    neuronsLayer(1), &
+                    neuronsLayer(2), &
+                    activationFunction, &
+                    eta, &
+                    alpha
 
             if (efitness < bfitness) then
                 bfitness = efitness
@@ -91,22 +94,27 @@ CONTAINS
         open(12, FILE = './output/ann' // trim(str1) // '.best')
         open(13, file = './output/nn.best')
 
+        read(12, '(A)') dummy
         read(12, *) fitness
         write(13, *) fitness
 !        write(*,*) "Valor funcao objetivo MPCA:",fitness
 
+        read(12, '(A)') dummy
         read(12, *) activationFunction
         write(13, '(I3)') activationFunction
 !        write(*, *) "Funcao de ativacao:", activationFunction
 
+        read(12, '(A)') dummy
         read(12, *) hiddenLayers
         write(13, '(I3)') hiddenLayers
 !        write(*, *) "Numero de camadas:", hiddenLayers
 
+        read(12, '(A)') dummy
         read(12, *) neuronsLayer(1)
         write(13, '(I3)') neuronsLayer(1)
 !        write(*, *) "Numero neuronio c1:",  neuronsLayer(1)
 
+        read(12, '(A)') dummy
         read(12, *) neuronsLayer(2)
         write(13, '(I3)') neuronsLayer(2)
 !        write(*, *) "Numero neuronio c2:", neuronsLayer(2)
