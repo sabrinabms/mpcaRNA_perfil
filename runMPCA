@@ -5,6 +5,8 @@ make
 
 rm -f ./output/*.out
 rm -f ./output/*.dat
+rm -f ./output/*.best
+rm -f ./output/*.txt
 
 EXP=$1
 PRC=$2
