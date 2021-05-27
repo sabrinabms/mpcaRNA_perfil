@@ -40,11 +40,13 @@ PROGRAM MPCA
     TYPE (Particle), allocatable, DIMENSION(:) :: bestParticle
     TYPE (Particle) :: bestParticleProcessor
     TYPE (OptionsMPCA) :: op
+    TYPE (annConfig) :: config
     TYPE (StatusMPCA) :: st
 
     INTEGER (kind = 8) :: nClasses
     INTEGER (kind = 8) :: nClassesValidation
     INTEGER (kind = 8) :: nClassesGeneralization
+    INTEGER (kind = 8) :: nClassesActivation
     INTEGER (kind = 8) :: nInputs
     INTEGER (kind = 8) :: nOutputs
     REAL (kind = 8) :: targetError
@@ -72,12 +74,17 @@ PROGRAM MPCA
     logical :: doStopMPCA = .false.
 
 
- NAMELIST /content/ nClasses, nClassesValidation, nClassesGeneralization, &
-        nInputs, nOutputs, &
-        targetError, nEpochs, &
-        loadWeightsBias, &
-        haveValidation, &
-        tryInitialArchitecture
+ NAMELIST /content/ nClasses, &
+         nClassesValidation, &
+         nClassesGeneralization, &
+         nClassesActivation, &
+         nInputs, &
+         nOutputs, &
+         targetError, &
+         nEpochs, &
+         loadWeightsBias, &
+         haveValidation, &
+         tryInitialArchitecture
 !        tryFixedConfiguration
 
     NAMELIST /bounds/ lower_Hidden_Layers, &
@@ -215,15 +222,16 @@ PROGRAM MPCA
     read(1, initial)
     close(1)
 
-    op % nClasses = nClasses
-    op % nClassesValidation = nClassesValidation
-    op % nClassesGeneralization = nClassesGeneralization
-    op % nInputs = nInputs
-    op % nOutputs = nOutputs
-    op % targetError = targetError
-    op % nEpochs = nEpochs
-    op % loadWeightsBias = loadWeightsBias
-    op % haveValidation = haveValidation
+    config % nClasses = nClasses
+    config % nClassesValidation = nClassesValidation
+    config % nClassesGeneralization = nClassesGeneralization
+    config % nClassesActivation = nClassesActivation
+    config % nInputs = nInputs
+    config % nOutputs = nOutputs
+    config % targetError = targetError
+    config % nEpochs = nEpochs
+    config % loadWeightsBias = loadWeightsBias
+    config % haveValidation = haveValidation
     op % lowerBound(1) = lower_Hidden_Layers
     op % lowerBound(2) = lower_First_Hidden_Layer
     op % lowerBound(3) = lower_Second_Hidden_Layer
@@ -237,44 +245,52 @@ PROGRAM MPCA
     op % upperBound(5) = upper_Alpha
     op % upperBound(6) = upper_Eta
 
+    ! print*, 'Leu o arquivo configuration.ini'
     !------------------------------------------------------------!
     !LENDO OS PARAMETROS DO ARQUIVO DE ENTRADA
     !------------------------------------------------------------!
-    allocate(op % x(op % nInputs, op % nClasses))
-    allocate(op % y(op % nOutputs, op % nClasses))
+    allocate(config % x(config % nInputs, config % nClasses))
+    allocate(config % y(config % nOutputs, config % nClasses))
+    ! print*, 'Alocou memoria para x e y'
 
     fString = '(F8.5)'
-    write(fString(2:7), '(I6)') op % nClasses
+    write(fString(2:7), '(I6)') config % nClasses
 
     OPEN (2, file = './data/x.txt')
-    DO i = 1, op % nInputs
-        READ(2, *) (op % x(i, j), j = 1, op % nClasses)
+    DO i = 1, config % nInputs
+        READ(2, *) (config % x(i, j), j = 1, config % nClasses)
     END DO
     CLOSE (2)
+    CLOSE (2)
+    ! print*, 'Leu arquivo de entrada: x'
 
     OPEN (1, file = './data/y.txt')
-    DO I = 1, op % nOutputs
-        READ(1, *) (op % y(i, j), j = 1, op % nClasses)
+    DO I = 1, config % nOutputs
+        READ(1, *) (config % y(i, j), j = 1, config % nClasses)
     END DO
     CLOSE (1)
+    ! print*, 'Leu arquivo de saida: y'
 
-    if (op % haveValidation .eqv. .true.) then
-        allocate(op % x_valid(op % nInputs, op % nClassesValidation))
-        allocate(op % y_valid(op % nOutputs, op % nClassesValidation))
+    if (config % haveValidation .eqv. .true.) then
+        allocate(config % x_valid(config % nInputs, config % nClassesValidation))
+        allocate(config % y_valid(config % nOutputs, config % nClassesValidation))
+        ! print*, 'Alocou memoria para x e y validaçao'
 
-        write(fString(2:7), '(I6)') op % nClassesValidation
+        write(fString(2:7), '(I6)') config % nClassesValidation
 
         OPEN (1, file = './data/y_valid.txt')
-        DO i = 1, op % nOutputs
-            READ(1, *) (op % y_valid(i, j), j = 1, op % nClassesValidation)
+        DO i = 1, config % nOutputs
+            READ(1, *) (config % y_valid(i, j), j = 1, config % nClassesValidation)
         END DO
         CLOSE (1)
+        ! print*, 'Leu arquivo validacao: x'
 
         OPEN (2, file = './data/x_valid.txt')
-        DO i = 1, op % nInputs
-            READ(2, *) (op % x_valid(i, j), j = 1, op % nClassesValidation)
+        DO i = 1, config % nInputs
+            READ(2, *) (config % x_valid(i, j), j = 1, config % nClassesValidation)
         END DO
         CLOSE (2)
+        ! print*, 'Leu arquivo validacao: y'
     end if
 
     ! RANDOM NUMBER CONFIGURATION
@@ -300,6 +316,7 @@ PROGRAM MPCA
     !*****************************
 
     DO contP = 1, op % nParticlesProcessor
+        ! print*, 'Entrou no loop : populacao inicial'
 
         if (contP == 1 .and. tryInitialArchitecture .eqv. .true.) then
             oldParticle(contP) % solution(1) = initial_Hidden_Layers
@@ -314,10 +331,12 @@ PROGRAM MPCA
                 oldParticle(contP) % solution(contD) = (harvest &
                     & * (op % upperBound(contD) - op % lowerBound(contD))) &
                     & + op % lowerBound(contD)
+                ! print*,'soluçao:',  oldParticle(contP) % solution(contD)
             end do
         end if
+        exit
 
-        oldParticle(contP) % fitness = neuralNetworkTraining(oldParticle(contP) % solution, op, st)
+        oldParticle(contP) % fitness = neuralNetworkTraining(oldParticle(contP) % solution, op, st, config)
         st % NFE = st % NFE + 1
 
         IF (oldParticle(contP) % fitness < bestParticle(contP) % fitness) THEN
@@ -331,6 +350,7 @@ PROGRAM MPCA
             bestParticleProcessor = bestParticle(contP)
         end if
     END DO
+    ! print*, 'Saiu do loop: população inicial'
 
     !***************************************************************************
     ! PRINCIPAL LOOP
@@ -341,17 +361,18 @@ PROGRAM MPCA
         .and. (.not. doStopMPCA) &
         )
         !PARTICLES LOOP (OpenMP)
+        ! print*,'Entrou no Loop Principal'
         DO contP = 1, op % nParticlesProcessor
-            CALL Perturbation(oldParticle(contP), newParticle(contP), bestParticle(contP), op, st)
+            CALL Perturbation(oldParticle(contP), newParticle(contP), bestParticle(contP), op, st, config)
             IF (newParticle(contP) % fitness < oldParticle(contP) % fitness) THEN
                 IF (newParticle(contP) % fitness < bestParticle(contP) % fitness) THEN
                     bestParticle(contP) = newParticle(contP)
                 END IF
                 oldParticle(contP) = newParticle(contP)
 
-                CALL Exploration(oldParticle(contP), newParticle(contP), bestParticle(contP), op, st)
+                CALL Exploration(oldParticle(contP), newParticle(contP), bestParticle(contP), op, st, config)
             ELSE
-                CALL Scattering(oldParticle(contP), newParticle(contP), bestParticle(contP), op, st)
+                CALL Scattering(oldParticle(contP), newParticle(contP), bestParticle(contP), op, st, config)
             END IF
 
             if(st % doStop) then
@@ -455,11 +476,11 @@ PROGRAM MPCA
     deallocate(maxB)
     deallocate(bestParticle)
     deallocate(realSolution)
-    deallocate(op % x)
-    deallocate(op % y)
-    if (op % haveValidation .eqv. .true.) then
-        deallocate(op % x_valid)
-        deallocate(op % y_valid)
+    deallocate(config % x)
+    deallocate(config % y)
+    if (config % haveValidation .eqv. .true.) then
+        deallocate(config % x_valid)
+        deallocate(config % y_valid)
     end if
 
     CALL MPI_Finalize(iError)

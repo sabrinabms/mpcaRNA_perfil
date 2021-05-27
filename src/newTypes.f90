@@ -32,25 +32,12 @@ TYPE :: OptionsMPCA
     CHARACTER*16 :: typeOpposition
     LOGICAL :: isOppositionEnabled
     LOGICAL :: verbose
-    
-    !MLP
-    INTEGER (kind = 8) :: nClasses
-    INTEGER (kind = 8) :: nClassesValidation
-    INTEGER (kind = 8) :: nClassesGeneralization
-    INTEGER (kind = 8) :: nInputs
-    INTEGER (kind = 8) :: nOutputs
-    REAL (kind = 8) :: targetError
-    INTEGER (kind = 8) :: nEpochs
-    integer :: loadWeightsBias
-    LOGICAL :: haveValidation
-    real (8), allocatable, dimension(:,:) :: x, x_valid
-    real (8), allocatable, dimension(:,:) :: y, y_valid
-    
-    CHARACTER*24 :: path_ent
-    CHARACTER*24 :: path_sai
-    CHARACTER*24 :: path_sai_valid
-    CHARACTER*24 :: path_ent_valid
-        
+
+!    CHARACTER*24 :: path_ent
+!    CHARACTER*24 :: path_sai
+!    CHARACTER*24 :: path_sai_valid
+!    CHARACTER*24 :: path_ent_valid
+
 END TYPE OptionsMPCA
     
 TYPE :: StatusMPCA
@@ -69,15 +56,10 @@ TYPE :: StatusMPCA
 END TYPE StatusMPCA
 
 TYPE :: annConfig
-    REAL (kind = 8), ALLOCATABLE, DIMENSION(:,:) :: wh1
-    REAL (kind = 8), ALLOCATABLE, DIMENSION(:,:) :: wh2
-    REAL (kind = 8), ALLOCATABLE, DIMENSION(:,:) :: ws
-    REAL (kind = 8), ALLOCATABLE, DIMENSION(:) :: bh1
-    REAL (kind = 8), ALLOCATABLE, DIMENSION(:) :: bh2
-    REAL (kind = 8), ALLOCATABLE, DIMENSION(:) :: bs
     integer :: nClasses
     integer :: nClassesValidation
     integer :: nClassesGeneralization
+    integer :: nClassesActivation
     integer :: nInputs
     integer :: nOutputs
     integer :: hiddenLayers
@@ -87,6 +69,18 @@ TYPE :: annConfig
     real (kind = 8) :: eta
     real (kind = 8) :: MeanSquaredError
     real (kind = 8) :: MeanSquaredErrorValidation
+    REAL (kind = 8) :: targetError
+    INTEGER (kind = 8) :: nEpochs
+    integer :: loadWeightsBias
+    LOGICAL :: haveValidation
+    REAL (kind = 8), ALLOCATABLE, DIMENSION(:,:) :: x, x_valid
+    REAL (kind = 8), ALLOCATABLE, DIMENSION(:,:) :: y, y_valid
+    REAL (kind = 8), ALLOCATABLE, DIMENSION(:,:) :: wh1
+    REAL (kind = 8), ALLOCATABLE, DIMENSION(:,:) :: wh2
+    REAL (kind = 8), ALLOCATABLE, DIMENSION(:,:) :: ws
+    REAL (kind = 8), ALLOCATABLE, DIMENSION(:) :: bh1
+    REAL (kind = 8), ALLOCATABLE, DIMENSION(:) :: bh2
+    REAL (kind = 8), ALLOCATABLE, DIMENSION(:) :: bs
 END TYPE annConfig
 
 END MODULE newTypes

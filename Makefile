@@ -5,10 +5,10 @@
 FC = mpif90
 
 # Opcoes de compilacao
-FFLAGS = -c -O3 -g
+FFLAGS = -c -O3 -g -w
 
 # Opcoes de otimizacao
-FFLAGSOPT = -O3 -g
+FFLAGSOPT = -O3 -g -w
 
 VPATH = src
 MODDIR = mod
