@@ -38,6 +38,7 @@ runMPCA
 
 # Arquivos de saida
 ./output
+*.txt
 *.out
 *.best
 fort.*
