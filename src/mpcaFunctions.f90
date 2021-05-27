@@ -13,7 +13,7 @@ MODULE mpcaFunctions
 
 CONTAINS
 
-    SUBROUTINE Perturbation(oldParticle, newParticle, bestParticle, op, st)
+    SUBROUTINE Perturbation(oldParticle, newParticle, bestParticle, op, st, config)
 
         IMPLICIT NONE
         INTEGER :: contD
@@ -23,6 +23,7 @@ CONTAINS
         TYPE (Particle), INTENT(INOUT) :: bestParticle
         TYPE (OptionsMPCA), INTENT(IN) :: op
         TYPE (StatusMPCA), INTENT(INOUT) :: st
+        type (annConfig), intent(in):: config
 
         DO contD = 1, op % nDimensions
             CALL RANDOM_NUMBER(alea)
@@ -39,7 +40,7 @@ CONTAINS
             END IF
         END DO
 
-        newParticle % fitness = neuralNetworkTraining(newParticle % solution, op, st)
+        newParticle % fitness = neuralNetworkTraining(newParticle % solution, op, st, config)
         st % NFE = st % NFE + 1
 
         IF (newParticle % fitness .LT. bestParticle % fitness) THEN
@@ -50,7 +51,7 @@ CONTAINS
 
     !********************************************************************
     !********************************************************************
-    SUBROUTINE Exploration(oldParticle, newParticle, bestParticle, op, st)
+    SUBROUTINE Exploration(oldParticle, newParticle, bestParticle, op, st, config)
         IMPLICIT NONE
         INTEGER :: l2, nDimensions
         INTEGER (kind = 8) :: iteracoes
@@ -58,11 +59,12 @@ CONTAINS
 
         TYPE (OptionsMPCA), INTENT(IN) :: op
         TYPE (StatusMPCA), INTENT(INOUT) :: st
+        type (annConfig), intent(in) :: config
 
         DO l2 = 1, op % iterPerturbation
-            CALL Small_Perturbation(oldParticle, newParticle, bestParticle, op, st)
+            CALL Small_Perturbation(oldParticle, newParticle, bestParticle, op, st, config)
 
-            newParticle % fitness = neuralNetworkTraining(newParticle % solution, op, st)
+            newParticle % fitness = neuralNetworkTraining(newParticle % solution, op, st, config)
 
             IF (newParticle % fitness .LT. oldParticle % fitness) THEN
                 oldParticle = newParticle
@@ -85,7 +87,7 @@ CONTAINS
 
     !********************************************************************
     !********************************************************************
-    SUBROUTINE Small_Perturbation(oldParticle, newParticle, bestParticle, op, st)
+    SUBROUTINE Small_Perturbation(oldParticle, newParticle, bestParticle, op, st, config)
         IMPLICIT NONE
         INTEGER :: contD
         REAL (kind = 8), ALLOCATABLE, DIMENSION(:) :: inferior
@@ -96,6 +98,7 @@ CONTAINS
         TYPE (Particle), INTENT(INOUT) :: bestParticle
         TYPE (OptionsMPCA), INTENT(IN) :: op
         TYPE (StatusMPCA), INTENT(INOUT) :: st
+        type (annConfig), intent(in) :: config
 
         ALLOCATE(inferior(op % nDimensions))
         ALLOCATE(superior(op % nDimensions))
@@ -132,7 +135,7 @@ CONTAINS
             END IF
         END DO
 
-        newParticle % fitness = neuralNetworkTraining(newParticle % solution, op, st)
+        newParticle % fitness = neuralNetworkTraining(newParticle % solution, op, st, config)
         st % NFE = st % NFE + 1
 
         DEALLOCATE(inferior)
@@ -142,7 +145,7 @@ CONTAINS
 
     !********************************************************************
     !********************************************************************
-    SUBROUTINE Scattering(oldParticle, newParticle, bestParticle, op, st)
+    SUBROUTINE Scattering(oldParticle, newParticle, bestParticle, op, st, config)
         IMPLICIT NONE
         INTEGER :: l2
         REAL (kind = 8) :: p_scat
@@ -150,6 +153,7 @@ CONTAINS
         TYPE (Particle), INTENT(INOUT) :: oldParticle, newParticle, bestParticle
         TYPE (OptionsMPCA), INTENT(IN) :: op
         TYPE (StatusMPCA), INTENT(INOUT) :: st
+        type (annConfig), intent(in):: config
         REAL  (kind = 8), PARAMETER :: pi = 3.1415927
 
         SELECT CASE (op % typeProbability)
@@ -169,7 +173,7 @@ CONTAINS
                 +op % lowerBound(l2)
             END DO
 
-            oldParticle % fitness = neuralNetworkTraining(oldParticle % solution, op, st)
+            oldParticle % fitness = neuralNetworkTraining(oldParticle % solution, op, st, config)
             st % NFE = st % NFE + 1
 
             IF (oldParticle % fitness .LT. bestParticle % fitness) THEN
@@ -181,7 +185,7 @@ CONTAINS
             end if
         END IF
 
-        CALL Exploration(oldParticle, newParticle, bestParticle, op, st)
+        CALL Exploration(oldParticle, newParticle, bestParticle, op, st, config)
 
     END SUBROUTINE
 

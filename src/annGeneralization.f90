@@ -24,6 +24,7 @@ CONTAINS
         INTEGER (kind = 8) :: nClasses
         INTEGER (kind = 8) :: nClassesValidation
         INTEGER (kind = 8) :: nClassesGeneralization
+        INTEGER (kind = 8) :: nClassesActivation
         INTEGER (kind = 8) :: nInputs
         INTEGER (kind = 8) :: nOutputs
         REAL (kind = 8) :: targetError
@@ -34,12 +35,14 @@ CONTAINS
 
         TYPE(annConfig) :: config
 
-        NAMELIST /content/ nClasses, nClassesValidation, nClassesGeneralization, &
-        nInputs, nOutputs, &
-        targetError, nEpochs, &
-        loadWeightsBias, &
-        haveValidation, &
-        tryInitialArchitecture
+        NAMELIST /content/ nClasses, nClassesValidation,&
+                nClassesGeneralization, &
+                nClassesActivation, &
+                nInputs, nOutputs, &
+                targetError, nEpochs, &
+                loadWeightsBias, &
+                haveValidation, &
+                tryInitialArchitecture
         !tryFixedConfiguration
 
         OPEN(1, FILE='./config/configuration.ini', STATUS='OLD', ACTION='READ')
@@ -51,15 +54,18 @@ CONTAINS
         config % nOutputs = nOutputs
 
         open (unit = 20, file = './output/final.out', status = 'old', action = 'read')
+        read(20, '(A)') dummy
 
         bfitness = 1e+10
         do iExperiment = 1, nExperiments
             read(20, '(ES14.6E2,I2,I3,I3,I2,ES14.6E2,ES14.6E2)') &
-            efitness, hiddenLayers, neuronsLayer(1), neuronsLayer(2), activationFunction, &
-            eta, alpha
-!            write(*, '(ES14.6E2,I2,I3,I3,I2,ES14.6E2,ES14.6E2)') &
-!            efitness, hiddenLayers, neuronsLayer(1), neuronsLayer(2), activationFunction, &
-!            eta, alpha
+                    efitness, &
+                    hiddenLayers, &
+                    neuronsLayer(1), &
+                    neuronsLayer(2), &
+                    activationFunction, &
+                    eta, &
+                    alpha
 
             if (efitness < bfitness) then
                 bfitness = efitness
@@ -68,13 +74,17 @@ CONTAINS
                 config % neuronsLayer(1) = neuronsLayer(1)
                 config % neuronsLayer(2) = neuronsLayer(2)
                 config % activationFunction = activationFunction
-                write(*,*)"Valor função objetivo MPCA:", bfitness
-		        write(*,*)"Numero camadas", config % hiddenLayers
-		        write(*,*)"Numero neuronico camada 1:", config % neuronsLayer(1)
-		        write(*,*)"Numero neuronico camada 2:", config % neuronsLayer(2)
-		        write(*,*)"Funcao de ativacao",  config % activationFunction
             end if
         end do
+
+        PRINT*, 'MELHOR RESULTADO:'
+        PRINT*, 'Função objetivo MPCA:', bfitness
+		PRINT*, 'Numero camadas', config % hiddenLayers
+		PRINT*, 'N.Neuronios C.1:', config % neuronsLayer(1)
+        if (config % hiddenLayers < 1) then
+            PRINT*, 'N.Neuronios C.2:',  config % neuronsLayer(2)
+        end if
+		PRINT*, 'Funcao de ativacao',  config % activationFunction
 
         close(20)
 
@@ -86,34 +96,47 @@ CONTAINS
             WRITE (str1, '(I3)') bExperiment
         END IF
 
-        write(*,*) 'MELHOR RESULTADO: ./output/ann' // trim(str1) // '.best'
+        PRINT*, 'MELHOR RESULTADO: ./output/ann' // trim(str1) // '.best'
 
         open(12, FILE = './output/ann' // trim(str1) // '.best')
         open(13, file = './output/nn.best')
 
+        read(12, '(A)') dummy
+!        print*, dummy
         read(12, *) fitness
         write(13, *) fitness
-!        write(*,*) "Valor funcao objetivo MPCA:",fitness
+!        PRINT*,fitness
 
+        read(12, '(A)') dummy
+!        PRINT*, dummy
         read(12, *) activationFunction
         write(13, '(I3)') activationFunction
-!        write(*, *) "Funcao de ativacao:", activationFunction
+!        PRINT*, activationFunction
 
+        read(12, '(A)') dummy
+!        print*, dummy
         read(12, *) hiddenLayers
         write(13, '(I3)') hiddenLayers
-!        write(*, *) "Numero de camadas:", hiddenLayers
+!        PRINT*, hiddenLayers
 
+        read(12, '(A)') dummy
+!        print*, dummy
         read(12, *) neuronsLayer(1)
         write(13, '(I3)') neuronsLayer(1)
-!        write(*, *) "Numero neuronio c1:",  neuronsLayer(1)
+!        PRINT*, neuronsLayer(1)
 
-        read(12, *) neuronsLayer(2)
-        write(13, '(I3)') neuronsLayer(2)
-!        write(*, *) "Numero neuronio c2:", neuronsLayer(2)
+        if (config % hiddenLayers > 1) then
+            read(12, '(A)') dummy
+!            print*, dummy
+            read(12, *) neuronsLayer(2)
+            write(13, '(I3)') neuronsLayer(2)
+!            PRINT*,  config % neuronsLayer(2)
+        end if
 
         read(12, *) dummy
+!        print*, dummy
         write(13, '(A)') dummy
-!        write(*, '(A)') dummy
+
 
         allocate(config % bh1(config % neuronsLayer(1)))
         allocate(config % bs(config % nOutputs))
@@ -121,25 +144,18 @@ CONTAINS
 
         fString = '(   F11.5)'
         write(fString(2:4), '(I3)') config % neuronsLayer(1)
-        write(*,*)"Parte 1", config % neuronsLayer(1), config % nInputs
 
         DO i = 1, config % nInputs
-            read(12, fString) (config % wh1(i, k), k = 1, config % neuronsLayer(1))
+            read(12, *) (config % wh1(i, k), k = 1, config % neuronsLayer(1))
             write(13, fString) (config % wh1(i, k), k = 1, config % neuronsLayer(1))
-!            write(*, fString) (config % wh1(i, k), k = 1, config % neuronsLayer(1))
         ENDDO
 
         read(12, *) dummy
         write(13, '(A)') dummy
-!        write(*, '(A)')  dummy
 
         read(12, *) (config % bh1(k), k = 1, config % neuronsLayer(1))
         write(13, fString) (config % bh1(k), k = 1, config % neuronsLayer(1))
-!        write(*,*)"Configuracao 2"
-!        write(*, fString) (config % bh1(k), k = 1, config % neuronsLayer(1))
 
-!        write(*, *) config % hiddenLayers
-                
         if (config % hiddenLayers == 2) then
             allocate(config % bh2(config % neuronsLayer(2)))
             allocate(config % wh2(config % neuronsLayer(1), config % neuronsLayer(2)))
@@ -147,48 +163,36 @@ CONTAINS
 
             read(12, *) dummy
             write(13, '(A)') dummy
-!            write(*, '(A)') dummy
             fString = '(   F11.5)'
             write(fString(2:4), '(I3)') config % neuronsLayer(2)
-!            write(*,*)"Configuracao 3"
             DO i = 1, config % neuronsLayer(1)
                 read(12, *) (config % wh2(i, k), k = 1, config % neuronsLayer(2))
                 write(13, fString) (config % wh2(i, k), k = 1, config % neuronsLayer(2))
-!                write(*, fString) (config % wh2(i, k), k = 1, config % neuronsLayer(2))
             ENDDO
 
             read(12, *) dummy
             write(13, '(A)') dummy
-!            write(*, '(A)') "Dummy",dummy
             read(12, *) (config % bh2(k), k = 1, config % neuronsLayer(2))
             write(13, fString) (config % bh2(k), k = 1, config % neuronsLayer(2))
-!            write(*,*)"Configuracao 4"
-!            write(*, fString) (config % bh2(k), k = 1, config % neuronsLayer(2))
 
             read(12, *) dummy
             write(13, '(A)') dummy
-!            write(*, '(A)')"Dummy", dummy
             fString = '(   F11.5)'
             write(fString(2:4), '(I3)') config % nOutputs
-!            write(*,*)"Configuracao 5"
             DO i = 1, config % neuronsLayer(2)
                 read(12, *) (config % ws(i, k), k = 1, config % nOutputs)
                 write(13, fString) (config % ws(i, k), k = 1, config % nOutputs)
-!                write(*, fString) (config % ws(i, k), k = 1, config % nOutputs)
             ENDDO
         else
             read(12, *) dummy
             write(13, '(A)') dummy
-!            write(*, '(A)')"Dummy", dummy
             fString = '(   F11.5)'
             write(fString(2:4), '(I3)') config % nOutputs
             allocate(config % ws(config % neuronsLayer(1), config % nOutputs))
-!            write(*,*)"Configuracao 6"
 
             DO i = 1, config % neuronsLayer(1)
                 read(12, *) (config % ws(i, k), k = 1, config % nOutputs)
                 write(13, fString) (config % ws(i, k), k = 1, config % nOutputs)
-!                write(*, fString) (config % ws(i, k), k = 1, config % nOutputs)
             ENDDO
         end if
 
